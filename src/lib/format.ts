@@ -1,6 +1,13 @@
 export const bdt = (n: number): string => `৳ ${n.toFixed(2).replace(/\.00$/, '')}`;
 
-export const bdtPlain = (n: number): string => n.toFixed(2).replace(/\.00$/, '');
+export const bdtPlain = (n: number): string => n.toFixed(2).replace(/\.00$/, '') === '' ? '0' : n.toFixed(2).replace(/\.00$/, '');
+
+// 100 Coins = 1 BDT (0.01 BDT per coin)
+export const COINS_PER_BDT = 100;
+
+export const coinsToBdt = (coins: number): number => coins / COINS_PER_BDT;
+
+export const coinsToBdtDisplay = (coins: number): string => bdt(coinsToBdt(coins));
 
 export function copy(text: string): void {
   try {

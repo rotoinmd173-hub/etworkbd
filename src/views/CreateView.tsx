@@ -1,18 +1,18 @@
 import { useState } from 'react';
 import { useAppStore } from '@/store/useAppStore';
-import { CATEGORIES, SUB_TASKS } from '@/data/categories';
+import { CATEGORIES, SUB_TASKS, rateForLevel } from '@/data/categories';
 import type { Platform, JobLevel } from '@/types';
 import { bdtPlain } from '@/lib/format';
 import { CategoryIcon } from '@/components/CategoryIcon';
 import { Toast } from '@/components/ui';
+import { useLanguage } from '@/lib/LanguageContext';
 import { Check, Link2, Upload, Image as ImageIcon, X, Calculator, MessageSquare } from 'lucide-react';
 
 export function CreateView() {
+  const { t } = useLanguage();
   const { createJob, jobCountByPlatform, settings, wallet, me } = useAppStore();
   const [platform, setPlatform] = useState<Platform>('Facebook');
   const [subTaskType, setSubTaskType] = useState(SUB_TASKS['Facebook'][0].label);
-  const [jobTitle, setJobTitle] = useState('');
-  const [rate, setRate] = useState(String(SUB_TASKS['Facebook'][0].rate));
   const [totalWorkers, setTotalWorkers] = useState('');
   const [pageName, setPageName] = useState('');
   const [pageLink, setPageLink] = useState('');
@@ -25,13 +25,10 @@ export function CreateView() {
     setPlatform(p);
     const first = SUB_TASKS[p][0];
     setSubTaskType(first.label);
-    setRate(String(first.rate));
   };
 
   const onSubTask = (label: string) => {
     setSubTaskType(label);
-    const found = SUB_TASKS[platform].find((s) => s.label === label);
-    if (found) setRate(String(found.rate));
   };
 
   const onFile = (file: File | undefined, setter: (s: string) => void) => {
@@ -41,7 +38,8 @@ export function CreateView() {
     reader.readAsDataURL(file);
   };
 
-  const r = parseFloat(rate) || 0;
+  const baseRate = SUB_TASKS[platform].find((s) => s.label === subTaskType)?.rate ?? 0;
+  const r = rateForLevel(baseRate, level);
   const tw = parseInt(totalWorkers, 10) || 0;
   const subtotal = r * tw;
   const serviceCharge = subtotal * (settings.serviceChargePercent / 100);
@@ -49,12 +47,16 @@ export function CreateView() {
   const myBalance = wallet().balance;
 
   const submit = () => {
-    if (!jobTitle.trim() || r <= 0 || !pageName.trim()) {
-      setToast({ msg: 'অনুগ্রহ করে সব প্রয়োজনীয় ঘর পূরণ করুন।', ok: false });
+    if (!pageName.trim()) {
+      setToast({ msg: t('অনুগ্রহ করে পেজ / প্রোফাইলের নাম লিখুন।', 'Please enter the page/profile name.'), ok: false });
+      return;
+    }
+    if (tw < settings.minWorkers) {
+      setToast({ msg: t(`সর্বনিম্ন ${settings.minWorkers} জন কর্মী প্রয়োজন।`, `At least ${settings.minWorkers} workers required.`), ok: false });
       return;
     }
     if (!screenshot) {
-      setToast({ msg: 'অনুগ্রহ করে একটি নমুনা স্ক্রিনশট আপলোড করুন।', ok: false });
+      setToast({ msg: t('অনুগ্রহ করে একটি নমুনা স্ক্রিনশট আপলোড করুন।', 'Please upload a sample screenshot.'), ok: false });
       return;
     }
     const commentLines = comments
@@ -64,7 +66,7 @@ export function CreateView() {
     const res = createJob({
       platform,
       subTaskType,
-      jobTitle: jobTitle.trim(),
+      jobTitle: subTaskType,
       rate: r,
       totalWorkers: tw,
       level,
@@ -73,33 +75,33 @@ export function CreateView() {
       pageLink: pageLink.trim() || undefined,
       commentLines,
       instructions: [
-        `সার্চ বক্সে নাম লিখে নির্দিষ্ট পেজ বা প্রোফাইলটি খুঁজুন: ${pageName.trim()}`,
-        `বলা অনুযায়ী কাজটি সঠিক নিয়ম মেনে সম্পূর্ণ করুন: ${subTaskType}`,
-        'কাজ শেষ করে একটি পরিষ্কার স্ক্রিনশট নিন',
+        t(`সার্চ বক্সে নাম লিখে নির্দিষ্ট পেজ বা প্রোফাইলটি খুঁজুন: ${pageName.trim()}`, `Search for this specific page or profile: ${pageName.trim()}`),
+        t(`বলা অনুযায়ী কাজটি সঠিক নিয়ম মেনে সম্পূর্ণ করুন: ${subTaskType}`, `Complete the task correctly as instructed: ${subTaskType}`),
+        t('কাজ শেষ করে একটি পরিষ্কার স্ক্রিনশট নিন', 'Take a clear screenshot after completing the task'),
       ],
     });
     setToast({ msg: res.message, ok: res.success });
     if (res.success) {
-      setJobTitle(''); setRate(''); setTotalWorkers(''); setPageName(''); setPageLink(''); setScreenshot(''); setComments('');
+      setTotalWorkers(''); setPageName(''); setPageLink(''); setScreenshot(''); setComments('');
     }
   };
 
   return (
     <div className="space-y-5 px-4 py-5">
       <div>
-        <h1 className="text-2xl font-extrabold text-slate-900">কাজ তৈরি করুন</h1>
-        <p className="mt-1 text-sm text-slate-500">কর্মীদের জন্য কাজ পোস্ট করুন। খরচ আপনার ব্যালেন্স থেকে কেটে নেওয়া হবে।</p>
+        <h1 className="text-2xl font-extrabold text-slate-900">{t('কাজ তৈরি করুন', 'Create Task')}</h1>
+        <p className="mt-1 text-sm text-slate-500">{t('কর্মীদের জন্য কাজ পোস্ট করুন। খরচ আপনার ব্যালেন্স থেকে কেটে নেওয়া হবে।', 'Post tasks for workers. The cost will be deducted from your balance.')}</p>
       </div>
 
       {/* Balance hint */}
       <div className="flex items-center justify-between rounded-2xl bg-violet-50 p-3.5 ring-1 ring-violet-200">
-        <span className="text-sm font-medium text-violet-700">আপনার ব্যালেন্স</span>
+        <span className="text-sm font-medium text-violet-700">{t('আপনার ব্যালেন্স', 'Your Balance')}</span>
         <span className="text-sm font-bold text-violet-800">৳ {bdtPlain(myBalance)}</span>
       </div>
 
       {/* Platform */}
       <div className="card">
-        <label className="label">প্ল্যাটফর্ম ক্যাটাগরি</label>
+        <label className="label">{t('প্ল্যাটফর্ম ক্যাটাগরি', 'Platform Category')}</label>
         <div className="flex flex-wrap gap-2">
           {CATEGORIES.map((c) => (
             <button
@@ -113,35 +115,29 @@ export function CreateView() {
           ))}
         </div>
         <p className="mt-2 text-xs text-slate-500">
-          {jobCountByPlatform(platform)} টি কাজ বর্তমানে {platform}-এ চলমান
+          {t(`${jobCountByPlatform(platform)} টি কাজ বর্তমানে ${platform}-এ চলমান`, `${jobCountByPlatform(platform)} tasks currently active on ${platform}`)}
         </p>
       </div>
 
       {/* Sub-task type */}
       <div className="card">
-        <label className="label">সাব-টাস্ক টাইপ</label>
+        <label className="label">{t('সাব-টাস্ক টাইপ', 'Sub-Task Type')}</label>
         <select value={subTaskType} onChange={(e) => onSubTask(e.target.value)} className="input">
           {SUB_TASKS[platform].map((s) => (
-            <option key={s.label} value={s.label}>{s.label} (৳{s.rate.toFixed(2)}/work)</option>
+            <option key={s.label} value={s.label}>{s.label} ({t(`৳${s.rate.toFixed(2)} বেইস রেট`, `৳${s.rate.toFixed(2)} base rate`)})</option>
           ))}
         </select>
-        <p className="mt-2 text-xs text-slate-500">সুপারিশকৃত রেট স্বয়ংক্রিয়ভাবে বসানো হয়েছে — আপনি চাইলে নিচে পরিবর্তন করতে পারেন।</p>
+        <p className="mt-2 text-xs text-slate-500">{t(`রেট স্বয়ংক্রিয়ভাবে নির্ধারিত হয় — লেভেল ${level === 'Level 1' ? '১' : level === 'Level 2' ? '২' : '৩'} অনুযায়ী প্রতি কর্মীর পেমেন্ট ৳${r.toFixed(2)}।`, `Rate is calculated automatically — at ${level} the per-worker payment is ৳${r.toFixed(2)}.`)}</p>
       </div>
 
       {/* Job details */}
       <div className="card space-y-4">
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="label">প্রতি কর্মীর পেমেন্ট (৳)</label>
-            <input className="input" type="number" step="0.05" min="0" value={rate} onChange={(e) => setRate(e.target.value)} placeholder="0.25" />
-          </div>
-          <div>
-            <label className="label">মোট কতজন কর্মী প্রয়োজন (সর্বনিম্ন {settings.minWorkers} জন)</label>
-            <input className="input" type="number" min={settings.minWorkers} value={totalWorkers} onChange={(e) => setTotalWorkers(e.target.value)} placeholder="১০০" />
-          </div>
+        <div>
+          <label className="label">{t(`মোট কতজন কর্মী প্রয়োজন (সর্বনিম্ন ${settings.minWorkers} জন)`, `Total workers needed (minimum ${settings.minWorkers})`)}</label>
+          <input className="input" type="number" min={settings.minWorkers} value={totalWorkers} onChange={(e) => setTotalWorkers(e.target.value)} placeholder="100" />
         </div>
         <div>
-          <label className="label">যে লেভেলের কর্মী প্রয়োজন</label>
+          <label className="label">{t('যে লেভেলের কর্মী প্রয়োজন', 'Worker Level Required')}</label>
           <div className="flex gap-2">
             {(['Level 1', 'Level 2', 'Level 3'] as JobLevel[]).map((l) => (
               <button
@@ -149,40 +145,44 @@ export function CreateView() {
                 onClick={() => setLevel(l)}
                 className={`pill flex-1 ${level === l ? 'bg-violet-600 text-white ring-violet-600' : 'bg-white text-slate-600 ring-slate-200'}`}
               >
-                {l === 'Level 1' ? 'লেভেল ১' : l === 'Level 2' ? 'লেভেল ২' : 'লেভেল ৩'}
+                {t(l === 'Level 1' ? 'লেভেল ১' : l === 'Level 2' ? 'লেভেল ২' : 'লেভেল ৩', l)}
               </button>
             ))}
           </div>
+          <div className="rounded-xl bg-violet-50 px-3.5 py-3 ring-1 ring-violet-200">
+            <p className="text-xs font-medium text-violet-600">{t(`প্রতি কর্মীর পেমেন্ট (${level === 'Level 1' ? 'লেভেল ১' : level === 'Level 2' ? 'লেভেল ২' : 'লেভেল ৩'})`, `Per-worker payment (${level})`)}</p>
+            <p className="text-lg font-bold text-violet-800">৳ {r.toFixed(2)}</p>
+          </div>
         </div>
         <div>
-          <label className="label">পেজ / প্রোফাইলের নাম</label>
-          <input className="input" value={pageName} onChange={(e) => setPageName(e.target.value)} placeholder="যেমন: টেক্সট বক্স অনুযায়ী সার্চ নাম" />
+          <label className="label">{t('পেজ / প্রোফাইলের নাম', 'Page / Profile Name')}</label>
+          <input className="input" value={pageName} onChange={(e) => setPageName(e.target.value)} placeholder={t('যেমন: টেক্সট বক্স অনুযায়ী সার্চ নাম', 'e.g. the search name as in the text box')} />
         </div>
         <div>
-          <label className="label flex items-center gap-1.5"><Link2 size={14} /> পেজ / ভিডিও লিংক (ঐচ্ছিক)</label>
+          <label className="label flex items-center gap-1.5"><Link2 size={14} /> {t('পেজ / ভিডিও লিংক (ঐচ্ছিক)', 'Page / Video Link (optional)')}</label>
           <input className="input" value={pageLink} onChange={(e) => setPageLink(e.target.value)} placeholder="https://facebook.com/..." />
         </div>
       </div>
 
       {/* Screenshot */}
       <div className="card">
-        <label className="label">পোস্ট বা প্রোফাইলের নমুনা স্ক্রিনশট</label>
-        <UploadBox value={screenshot} onChange={(f) => onFile(f, setScreenshot)} onClear={() => setScreenshot('')} label="স্ক্রিনশট আপলোড করতে এখানে ট্যাপ করুন" />
+        <label className="label">{t('পোস্ট বা প্রোফাইলের নমুনা স্ক্রিনশট', 'Sample Screenshot of Post or Profile')}</label>
+        <UploadBox value={screenshot} onChange={(f) => onFile(f, setScreenshot)} onClear={() => setScreenshot('')} label={t('স্ক্রিনশট আপলোড করতে এখানে ট্যাপ করুন', 'Tap here to upload a screenshot')} />
       </div>
 
       {/* Selective comment lines */}
       <div className="card">
-        <label className="label flex items-center gap-1.5"><MessageSquare size={14} /> নির্দিষ্ট কমেন্টের লাইনসমূহ</label>
-        <p className="mb-2 text-xs text-slate-500">প্রতি লাইনে একটি কমেন্ট লিখুন। কর্মীরা এখান থেকে একটি কমেন্ট ব্যবহার করবে।</p>
+        <label className="label flex items-center gap-1.5"><MessageSquare size={14} /> {t('নির্দিষ্ট কমেন্টের লাইনসমূহ', 'Specific Comment Lines')}</label>
+        <p className="mb-2 text-xs text-slate-500">{t('প্রতি লাইনে একটি কমেন্ট লিখুন। কর্মীরা এখান থেকে একটি কমেন্ট ব্যবহার করবে।', 'Write one comment per line. Workers will pick one from these.')}</p>
         <textarea
           className="input min-h-[100px] resize-y"
           value={comments}
           onChange={(e) => setComments(e.target.value)}
-          placeholder={'দারুণ পেজ!\nখুব তথ্যবহুল\nফলো করছি'}
+          placeholder={t('দারুণ পেজ!\nখুব তথ্যবহুল\nফলো করছি', 'Great page!\nVery informative\nFollowing now')}
         />
         {comments.trim() && (
           <p className="mt-2 text-xs text-slate-500">
-            {comments.split('\n').filter((l) => l.trim()).length} টি কমেন্ট যোগ হয়েছে
+            {t(`${comments.split('\n').filter((l) => l.trim()).length} টি কমেন্ট যোগ হয়েছে`, `${comments.split('\n').filter((l) => l.trim()).length} comments added`)}
           </p>
         )}
       </div>
@@ -191,27 +191,27 @@ export function CreateView() {
       {r > 0 && tw > 0 && (
         <div className="card space-y-2.5 bg-violet-50/60 ring-violet-200">
           <p className="flex items-center gap-1.5 text-sm font-bold text-violet-800">
-            <Calculator size={16} /> খরচের হিসাব
+            <Calculator size={16} /> {t('খরচের হিসাব', 'Cost Breakdown')}
           </p>
-          <Line label={`সাবটোটাল (${tw} × ৳${bdtPlain(r)})`} value={`৳ ${bdtPlain(subtotal)}`} />
-          <Line label={`সার্ভিস চার্জ (${settings.serviceChargePercent}%)`} value={`৳ ${bdtPlain(serviceCharge)}`} />
+          <Line label={t(`সাবটোটাল (${tw} × ৳${bdtPlain(r)})`, `Subtotal (${tw} × ৳${bdtPlain(r)})`)} value={`৳ ${bdtPlain(subtotal)}`} />
+          <Line label={t(`সার্ভিস চার্জ (${settings.serviceChargePercent}%)`, `Service Charge (${settings.serviceChargePercent}%)`)} value={`৳ ${bdtPlain(serviceCharge)}`} />
           <div className="border-t border-violet-200 pt-2.5">
-            <Line label="মোট খরচ" value={`৳ ${bdtPlain(totalCost)}`} bold />
+            <Line label={t('মোট খরচ', 'Total Cost')} value={`৳ ${bdtPlain(totalCost)}`} bold />
           </div>
           <p className={`text-xs font-medium ${myBalance >= totalCost ? 'text-emerald-600' : 'text-rose-600'}`}>
             {myBalance >= totalCost
-              ? `কেটে নেওয়ার পর ৳ ${bdtPlain(myBalance - totalCost)} অবশিষ্ট থাকবে`
-              : `৳ ${bdtPlain(totalCost - myBalance)} ব্যালেন্স কম`}
+              ? t(`কেটে নেওয়ার পর ৳ ${bdtPlain(myBalance - totalCost)} অবশিষ্ট থাকবে`, `৳ ${bdtPlain(myBalance - totalCost)} will remain after deduction`)
+              : t(`৳ ${bdtPlain(totalCost - myBalance)} ব্যালেন্স কম`, `৳ ${bdtPlain(totalCost - myBalance)} balance short`)}
           </p>
         </div>
       )}
 
       <button
         onClick={submit}
-        disabled={r <= 0 || tw < settings.minWorkers || myBalance < totalCost}
+        disabled={tw < settings.minWorkers || myBalance < totalCost}
         className="brand-btn w-full py-3 text-base"
       >
-        <Check size={18} /> কাজটি পোস্ট করুন · ৳ {bdtPlain(totalCost)}
+        <Check size={18} /> {t('কাজটি পোস্ট করুন', 'Post Task')} · ৳ {bdtPlain(totalCost)}
       </button>
 
       {toast && <Toast message={toast.msg} onClose={() => setToast(null)} tone={toast.ok ? 'success' : 'error'} />}
@@ -236,6 +236,7 @@ export function UploadBox({
   onClear: () => void;
   label?: string;
 }) {
+  const { t } = useLanguage();
   return (
     <label className="relative flex aspect-video w-full cursor-pointer items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 transition hover:border-violet-400 hover:bg-violet-50/50">
       {value ? (
@@ -252,7 +253,7 @@ export function UploadBox({
       ) : (
         <div className="flex flex-col items-center gap-1.5 text-slate-400">
           {label ? <Upload size={22} /> : <ImageIcon size={26} />}
-          <span className="text-xs font-medium">{label ?? 'স্ক্রিনশট আপলোড করতে এখানে ট্যাপ করুন'}</span>
+          <span className="text-xs font-medium">{label ?? t('স্ক্রিনশট আপলোড করতে এখানে ট্যাপ করুন', 'Tap here to upload a screenshot')}</span>
         </div>
       )}
       <input type="file" accept="image/*" className="hidden" onChange={(e) => onChange(e.target.files?.[0])} />

@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { supabase, upsertProfile } from '@/lib/supabase';
+import { supabase, upsertProfile, applyReferralCode } from '@/lib/supabase';
 import { FeederAppLogo } from '@/components/BrandLogos';
 import { Toast } from '@/components/ui';
-import { Mail, Lock, User as UserIcon, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Mail, Lock, User as UserIcon, Eye, EyeOff, Loader2, Gift } from 'lucide-react';
 
 type Mode = 'login' | 'signup';
 
@@ -19,6 +19,7 @@ export function AuthView() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [referralCode, setReferralCode] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
@@ -51,6 +52,9 @@ export function AuthView() {
         const uid = data.user?.id;
         if (uid) {
           await upsertProfile(uid, name.trim(), email.trim());
+          if (referralCode.trim()) {
+            await applyReferralCode(referralCode.trim(), uid);
+          }
         }
         // onAuthStateChange in useAuth will pick up the new session
       } else {
@@ -139,6 +143,21 @@ export function AuthView() {
               {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </Field>
+
+          {mode === 'signup' && (
+            <Field
+              icon={<Gift size={18} className="text-slate-400" />}
+              label="Referral Code (optional)"
+            >
+              <input
+                type="text"
+                value={referralCode}
+                onChange={(e) => setReferralCode(e.target.value)}
+                placeholder="Enter a friend's code for 100 bonus coins"
+                className="w-full bg-transparent text-sm font-medium text-slate-800 outline-none placeholder:text-slate-400"
+              />
+            </Field>
+          )}
 
           <button
             onClick={submit}

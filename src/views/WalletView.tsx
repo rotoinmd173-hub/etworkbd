@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useAppStore } from '@/store/useAppStore';
-import { bdt, timeAgo } from '@/lib/format';
+import { bdt, timeAgo, coinsToBdt, coinsToBdtDisplay } from '@/lib/format';
 import type { TxnType, DepositMethod } from '@/types';
 import { Toast } from '@/components/ui';
+import { useLanguage } from '@/lib/LanguageContext';
 import { logout } from '@/App';
 import { cn } from '@/lib/cn';
 import type { Profile } from '@/lib/supabase';
@@ -21,10 +22,11 @@ const TXN_META: Record<TxnType, { label: string; icon: typeof TrendingUp; tone: 
   coin: { label: 'Coin', icon: Coins, tone: 'text-amber-600 bg-amber-100' },
 };
 
-const METHODS: DepositMethod[] = ['bKash Personal', 'Nagad Personal', 'Rocket Personal'];
+const METHODS: DepositMethod[] = ['bKash Personal', 'Nagad Personal', 'Rocket Personal', 'Upay Personal'];
 const WITHDRAW_QUICK = [50, 100, 500, 1000, 2000, 5000];
 
 export function WalletView({ go, profile }: { go: (t: string) => void; profile: Profile | null }) {
+  const { t } = useLanguage();
   const { wallet, me } = useAppStore();
   const w = wallet();
   const user = me();
@@ -34,8 +36,8 @@ export function WalletView({ go, profile }: { go: (t: string) => void; profile: 
 
   return (
     <div className="px-4 py-5">
-      <h1 className="text-2xl font-extrabold text-slate-900">Wallet</h1>
-      <p className="mt-1 text-sm text-slate-500">Track your balance and transactions.</p>
+      <h1 className="text-2xl font-extrabold text-slate-900">{t('Wallet', 'Wallet')}</h1>
+      <p className="mt-1 text-sm text-slate-500">{t('Track your balance and transactions.', 'Track your balance and transactions.')}</p>
 
       {/* Balance card */}
       <div className="relative mt-5 overflow-hidden rounded-3xl bg-gradient-to-br from-violet-700 via-violet-800 to-violet-950 p-5 text-white shadow-lg">
@@ -43,12 +45,15 @@ export function WalletView({ go, profile }: { go: (t: string) => void; profile: 
         <div className="absolute -bottom-10 -left-6 h-28 w-28 rounded-full bg-white/5" />
         <div className="relative">
           <p className="flex items-center gap-1.5 text-xs text-violet-200">
-            <WalletIcon size={14} /> Current Balance
+            <WalletIcon size={14} /> {t('Current Balance', 'Current Balance')}
           </p>
           <p className="mt-1 text-4xl font-extrabold tracking-tight">{bdt(liveBalance)}</p>
-          <div className="mt-4 flex items-center gap-2">
+          <div className="mt-4 flex flex-wrap items-center gap-2">
             <span className="flex items-center gap-1.5 rounded-lg bg-white/15 px-2.5 py-1 text-xs font-semibold">
-              <Coins size={13} className="text-amber-300" /> {liveCoins} Coins
+              <Coins size={13} className="text-amber-300" /> {liveCoins.toLocaleString()} {t('Coins', 'Coins')}
+            </span>
+            <span className="flex items-center gap-1.5 rounded-lg bg-amber-400/20 px-2.5 py-1 text-xs font-semibold text-amber-200">
+              = {coinsToBdtDisplay(liveCoins)} BDT
             </span>
           </div>
         </div>
@@ -57,33 +62,34 @@ export function WalletView({ go, profile }: { go: (t: string) => void; profile: 
       {/* Action buttons */}
       <div className="mt-4 grid grid-cols-2 gap-3">
         <button onClick={() => go('deposit')} className="brand-btn py-3">
-          <ArrowDownToLine size={18} /> Deposit
+          <ArrowDownToLine size={18} /> {t('Deposit', 'Deposit')}
         </button>
         <button onClick={() => go('withdraw')} className="ghost-btn py-3">
-          <ArrowUpFromLine size={18} /> Withdraw
+          <ArrowUpFromLine size={18} /> {t('Withdraw', 'Withdraw')}
         </button>
       </div>
 
       {/* Stats grid */}
-      <h2 className="mb-3 mt-6 text-base font-bold text-slate-800">Overview</h2>
+      <h2 className="mb-3 mt-6 text-base font-bold text-slate-800">{t('Overview', 'Overview')}</h2>
       <div className="grid grid-cols-2 gap-3">
-        <StatBox label="Lifetime Earnings" value={bdt(w.lifetimeEarnings)} icon={<TrendingUp size={16} />} tone="text-emerald-600" />
-        <StatBox label="Total Deposit" value={bdt(w.totalDeposit)} icon={<ArrowDownToLine size={16} />} tone="text-blue-600" />
-        <StatBox label="Total Withdraw" value={bdt(w.totalWithdraw)} icon={<ArrowUpFromLine size={16} />} tone="text-amber-600" />
-        <StatBox label="Total Spend" value={bdt(w.totalSpend)} icon={<TrendingDown size={16} />} tone="text-rose-600" />
-        <StatBox label="Total Penalty" value={bdt(w.totalPenalty)} icon={<AlertCircle size={16} />} tone="text-rose-600" />
-        <StatBox label="Coin Balance" value={`${w.coins}`} icon={<Coins size={16} />} tone="text-amber-600" />
+        <StatBox label={t('Lifetime Earnings', 'Lifetime Earnings')} value={bdt(w.lifetimeEarnings)} icon={<TrendingUp size={16} />} tone="text-emerald-600" />
+        <StatBox label={t('Total Deposit', 'Total Deposit')} value={bdt(w.totalDeposit)} icon={<ArrowDownToLine size={16} />} tone="text-blue-600" />
+        <StatBox label={t('Total Withdraw', 'Total Withdraw')} value={bdt(w.totalWithdraw)} icon={<ArrowUpFromLine size={16} />} tone="text-amber-600" />
+        <StatBox label={t('Total Spend', 'Total Spend')} value={bdt(w.totalSpend)} icon={<TrendingDown size={16} />} tone="text-rose-600" />
+        <StatBox label={t('Total Penalty', 'Total Penalty')} value={bdt(w.totalPenalty)} icon={<AlertCircle size={16} />} tone="text-rose-600" />
+        <StatBox label={t('Coin Balance', 'Coin Balance')} value={`${w.coins}`} icon={<Coins size={16} />} tone="text-amber-600" />
+        <StatBox label={t('Coins = BDT', 'Coins = BDT')} value={coinsToBdtDisplay(w.coins)} icon={<WalletIcon size={16} />} tone="text-violet-600" />
       </div>
 
       {/* Transactions */}
       <div className="mb-3 mt-6 flex items-center justify-between">
-        <h2 className="text-base font-bold text-slate-800">Recent Transactions</h2>
+        <h2 className="text-base font-bold text-slate-800">{t('Recent Transactions', 'Recent Transactions')}</h2>
         <History size={18} className="text-slate-400" />
       </div>
       <div className="space-y-2.5">
         {transactions.length === 0 && (
           <div className="rounded-2xl bg-white p-6 text-center text-sm text-slate-400 ring-1 ring-slate-200">
-            No transactions yet. Complete a work to earn your first reward.
+            {t('No transactions yet. Complete a work to earn your first reward.', 'No transactions yet. Complete a task to earn your first reward.')}
           </div>
         )}
         {transactions.slice(0, 30).map((t) => {
@@ -124,6 +130,7 @@ const SERVICE_CHARGE_PERCENT = 25;
 const MIN_WITHDRAW = 50;
 
 export function WithdrawView({ onBack }: { onBack: () => void }) {
+  const { t } = useLanguage();
   const { requestWithdraw, wallet } = useAppStore();
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState<DepositMethod>('bKash Personal');
@@ -140,12 +147,12 @@ export function WithdrawView({ onBack }: { onBack: () => void }) {
 
   const submit = () => {
     if (net < MIN_WITHDRAW) {
-      return setToast({ msg: 'সর্বনিম্ন উইথড্র অ্যামাউন্ট ৳৫০ হতে হবে।', ok: false });
+      return setToast({ msg: t('সর্বনিম্ন উইথড্র অ্যামাউন্ট ৳৫০ হতে হবে।', 'Minimum withdrawal amount must be ৳50.'), ok: false });
     }
     if (insufficientBalance) {
-      return setToast({ msg: `পর্যাপ্ত ব্যালেন্স নেই! চার্জসহ মোট ৳${totalDeducted.toFixed(2)} টাকা ব্যালেন্সে থাকতে হবে।`, ok: false });
+      return setToast({ msg: t(`পর্যাপ্ত ব্যালেন্স নেই! চার্জসহ মোট ৳${totalDeducted.toFixed(2)} টাকা ব্যালেন্সে থাকতে হবে।`, `Insufficient balance! You need at least ৳${totalDeducted.toFixed(2)} including charge.`), ok: false });
     }
-    if (!receiver.trim()) return setToast({ msg: 'রিসিভার নম্বর লিখুন।', ok: false });
+    if (!receiver.trim()) return setToast({ msg: t('রিসিভার নম্বর লিখুন।', 'Please enter the receiver number.'), ok: false });
     const res = requestWithdraw(net, method, receiver.trim());
     setToast({ msg: res.message, ok: res.success });
     if (res.success) { setAmount(''); setReceiver(''); }
@@ -157,16 +164,16 @@ export function WithdrawView({ onBack }: { onBack: () => void }) {
         <button onClick={onBack} className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-700 active:scale-95">
           <ArrowUpFromLine size={18} />
         </button>
-        <h1 className="text-base font-bold text-slate-800">টাকা তুলুন (Withdraw)</h1>
+        <h1 className="text-base font-bold text-slate-800">{t('টাকা তুলুন (Withdraw)', 'Withdraw Money')}</h1>
       </div>
       <div className="space-y-4 px-4 py-4">
         <div className="rounded-2xl bg-violet-50 p-4 ring-1 ring-violet-200">
-          <p className="text-xs font-medium text-violet-700">Available Balance</p>
+          <p className="text-xs font-medium text-violet-700">{t('Available Balance', 'Available Balance')}</p>
           <p className="text-2xl font-extrabold text-violet-800">{bdt(w.balance)}</p>
         </div>
 
         <div className="card">
-          <label className="label">যে পরিমাণ পেতে চান (Net Receive)</label>
+          <label className="label">{t('যে পরিমাণ পেতে চান (Net Receive)', 'Amount you want to receive (Net)')}</label>
           <div className="relative">
             <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-lg font-bold text-slate-400">৳</span>
             <input
@@ -178,7 +185,7 @@ export function WithdrawView({ onBack }: { onBack: () => void }) {
               placeholder="0"
             />
           </div>
-          <p className="mt-2 text-xs text-slate-500">এই পরিমাণই আপনি পাবেন। এর উপর ২৫% সার্ভিস চার্জ যোগ হবে।</p>
+          <p className="mt-2 text-xs text-slate-500">{t('এই পরিমাণই আপনি পাবেন। এর উপর ২৫% সার্ভিস চার্জ যোগ হবে।', 'You will receive exactly this amount. A 25% service charge will be added on top.')}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             {WITHDRAW_QUICK.map((q) => (
               <button
@@ -200,18 +207,18 @@ export function WithdrawView({ onBack }: { onBack: () => void }) {
         {/* Charge breakdown */}
         {net > 0 && (
           <div className="rounded-2xl bg-white p-4 ring-1 ring-slate-200/70 shadow-sm">
-            <p className="mb-3 text-xs font-bold uppercase tracking-wide text-slate-400">চার্জ বিবরণ</p>
+            <p className="mb-3 text-xs font-bold uppercase tracking-wide text-slate-400">{t('চার্জ বিবরণ', 'Charge Details')}</p>
             <div className="space-y-2.5 text-sm">
               <div className="flex items-center justify-between">
-                <span className="text-slate-500">Withdrawal Amount (Net Receive)</span>
+                <span className="text-slate-500">{t('Withdrawal Amount (Net Receive)', 'Withdrawal Amount (Net Receive)')}</span>
                 <span className="font-semibold text-slate-800">৳{net.toFixed(2)}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-slate-500">Service Charge (25%)</span>
+                <span className="text-slate-500">{t('Service Charge (25%)', 'Service Charge (25%)')}</span>
                 <span className="font-semibold text-rose-600">+৳{charge.toFixed(2)}</span>
               </div>
               <div className="flex items-center justify-between border-t border-dashed border-slate-200 pt-2.5">
-                <span className="font-bold text-slate-700">Total Balance Deducted</span>
+                <span className="font-bold text-slate-700">{t('Total Balance Deducted', 'Total Balance Deducted')}</span>
                 <span className={cn('text-base font-extrabold', insufficientBalance ? 'text-rose-600' : 'text-violet-700')}>
                   ৳{totalDeducted.toFixed(2)}
                 </span>
@@ -223,17 +230,17 @@ export function WithdrawView({ onBack }: { onBack: () => void }) {
         {/* Validation messages */}
         {amountTooLow && (
           <div className="rounded-xl bg-rose-50 px-3.5 py-3 text-xs font-medium text-rose-600 ring-1 ring-rose-200">
-            সর্বনিম্ন উইথড্র অ্যামাউন্ট ৳৫০ হতে হবে।
+            {t('সর্বনিম্ন উইথড্র অ্যামাউন্ট ৳৫০ হতে হবে।', 'Minimum withdrawal amount must be ৳50.')}
           </div>
         )}
         {insufficientBalance && (
           <div className="rounded-xl bg-rose-50 px-3.5 py-3 text-xs font-medium text-rose-600 ring-1 ring-rose-200">
-            পর্যাপ্ত ব্যালেন্স নেই! চার্জসহ মোট ৳{totalDeducted.toFixed(2)} টাকা ব্যালেন্সে থাকতে হবে।
+            {t(`পর্যাপ্ত ব্যালেন্স নেই! চার্জসহ মোট ৳${totalDeducted.toFixed(2)} টাকা ব্যালেন্সে থাকতে হবে।`, `Insufficient balance! You need at least ৳${totalDeducted.toFixed(2)} including charge.`)}
           </div>
         )}
 
         <div className="card">
-          <label className="label">Payment Method</label>
+          <label className="label">{t('Payment Method', 'Payment Method')}</label>
           <div className="space-y-2">
             {METHODS.map((m) => (
               <button key={m} onClick={() => setMethod(m)}
@@ -245,7 +252,7 @@ export function WithdrawView({ onBack }: { onBack: () => void }) {
           </div>
         </div>
         <div className="card">
-          <label className="label">Receiver Number</label>
+          <label className="label">{t('Receiver Number', 'Receiver Number')}</label>
           <input className="input" value={receiver} onChange={(e) => setReceiver(e.target.value)} placeholder="01XXXXXXXXX" />
         </div>
         <button
@@ -253,7 +260,7 @@ export function WithdrawView({ onBack }: { onBack: () => void }) {
           disabled={!canSubmit}
           className="brand-btn w-full py-3 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          <ArrowUpFromLine size={18} /> উত্তোলনের রিকোয়েস্ট পাঠান
+          <ArrowUpFromLine size={18} /> {t('উত্তোলনের রিকোয়েস্ট পাঠান', 'Send Withdrawal Request')}
         </button>
       </div>
       {toast && <Toast message={toast.msg} onClose={() => setToast(null)} tone={toast.ok ? 'success' : 'error'} />}
@@ -262,6 +269,7 @@ export function WithdrawView({ onBack }: { onBack: () => void }) {
 }
 
 export function ProfileView({ goAdmin, profile }: { goAdmin: () => void; profile: Profile | null }) {
+  const { t } = useLanguage();
   const { me, wallet, isAdminMode } = useAppStore();
   const user = me();
   const w = wallet();
@@ -285,21 +293,21 @@ export function ProfileView({ goAdmin, profile }: { goAdmin: () => void; profile
         <h1 className="mt-4 text-xl font-extrabold text-slate-900">{displayName}</h1>
         <p className="text-sm text-slate-500">{email}</p>
         <span className="badge mt-2 bg-emerald-100 text-emerald-700">{user.level}</span>
-        {user.blocked && <span className="badge mt-2 bg-rose-100 text-rose-700">Blocked</span>}
-      </div>
+        {user.blocked && <span className="badge mt-2 bg-rose-100 text-rose-700">{t('Blocked', 'Blocked')}</span>}
+        
 
       <div className="mt-6 grid grid-cols-3 gap-3">
-        <MiniStat label="Balance" value={bdt(liveBalance)} />
-        <MiniStat label="Coins" value={`${liveCoins}`} />
-        <MiniStat label="Earned" value={bdt(w.lifetimeEarnings)} />
+        <MiniStat label={t('Balance', 'Balance')} value={bdt(liveBalance)} />
+        <MiniStat label={t('Coins', 'Coins')} value={`${liveCoins}`} />
+        <MiniStat label={t('Coins=BDT', 'Coins=BDT')} value={coinsToBdtDisplay(liveCoins)} />
       </div>
 
       <div className="mt-5 divide-y divide-slate-100 rounded-2xl bg-white ring-1 ring-slate-200/70 shadow-sm">
-        <Row2 label="Total Deposit" value={bdt(w.totalDeposit)} />
-        <Row2 label="Total Withdraw" value={bdt(w.totalWithdraw)} />
-        <Row2 label="Total Spend" value={bdt(w.totalSpend)} />
-        <Row2 label="Total Penalty" value={bdt(w.totalPenalty)} />
-        <Row2 label="Account" value={user.blocked ? 'Blocked' : 'Active'} />
+        <Row2 label={t('Total Deposit', 'Total Deposit')} value={bdt(w.totalDeposit)} />
+        <Row2 label={t('Total Withdraw', 'Total Withdraw')} value={bdt(w.totalWithdraw)} />
+        <Row2 label={t('Total Spend', 'Total Spend')} value={bdt(w.totalSpend)} />
+        <Row2 label={t('Total Penalty', 'Total Penalty')} value={bdt(w.totalPenalty)} />
+        <Row2 label={t('Account', 'Account')} value={user.blocked ? t('Blocked', 'Blocked') : t('Active', 'Active')} />
       </div>
 
       {/* Admin toggle */}
@@ -310,8 +318,8 @@ export function ProfileView({ goAdmin, profile }: { goAdmin: () => void; profile
         <span className="flex items-center gap-3">
           <Shield size={20} className="text-violet-400" />
           <span className="text-left">
-            <span className="block text-sm font-bold">Admin Panel</span>
-            <span className="block text-xs text-slate-300">Manage users, proofs, deposits & settings</span>
+            <span className="block text-sm font-bold">{t('Admin Panel', 'Admin Panel')}</span>
+            <span className="block text-xs text-slate-300">{t('Manage users, proofs, deposits & settings', 'Manage users, proofs, deposits & settings')}</span>
           </span>
         </span>
         <ArrowUpFromLine size={18} className="rotate-90 text-slate-400" />
@@ -324,7 +332,7 @@ export function ProfileView({ goAdmin, profile }: { goAdmin: () => void; profile
         className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-bold text-rose-600 shadow-sm transition active:scale-[0.99] disabled:opacity-70"
       >
         {loggingOut ? <Loader2 size={18} className="animate-spin" /> : <LogOut size={18} />}
-        {loggingOut ? 'Logging out…' : 'Log Out'}
+        {loggingOut ? t('Logging out…', 'Logging out…') : t('Log Out', 'Log Out')}
       </button>
     </div>
   );

@@ -1,13 +1,14 @@
 import { cn } from '@/lib/cn';
+import { useLanguage } from '@/lib/LanguageContext';
 
 export type TabKey = 'home' | 'work' | 'create' | 'wallet' | 'profile';
 
-const TABS: { key: TabKey; label: string; icon: string }[] = [
-  { key: 'home', label: 'হোম', icon: 'Home' },
-  { key: 'work', label: 'কাজ', icon: 'Briefcase' },
-  { key: 'create', label: 'তৈরি করুন', icon: 'PlusCircle' },
-  { key: 'wallet', label: 'ওয়ালেট', icon: 'Wallet' },
-  { key: 'profile', label: 'প্রোফাইল', icon: 'User' },
+const TABS: { key: TabKey; bn: string; en: string; icon: string }[] = [
+  { key: 'home', bn: 'হোম', en: 'Home', icon: 'Home' },
+  { key: 'work', bn: 'কাজ', en: 'Tasks', icon: 'Briefcase' },
+  { key: 'create', bn: 'তৈরি করুন', en: 'Create', icon: 'PlusCircle' },
+  { key: 'wallet', bn: 'ওয়ালেট', en: 'Wallet', icon: 'Wallet' },
+  { key: 'profile', bn: 'প্রোফাইল', en: 'Profile', icon: 'User' },
 ];
 
 import { Home, Briefcase, PlusCircle, Wallet, User } from 'lucide-react';
@@ -20,6 +21,8 @@ const ICONS: Record<string, typeof Home> = {
 };
 
 export function BottomNav({ active, onChange }: { active: TabKey; onChange: (t: TabKey) => void }) {
+  const { t: translate } = useLanguage();
+
   return (
     <nav className="fixed bottom-0 left-1/2 z-40 w-full max-w-md -translate-x-1/2 border-t border-slate-200 bg-white/95 backdrop-blur-md">
       <div className="mx-auto flex max-w-md items-stretch justify-between px-2 py-1.5">
@@ -42,7 +45,7 @@ export function BottomNav({ active, onChange }: { active: TabKey; onChange: (t: 
                 >
                   <Icon size={24} />
                 </span>
-                <span className="mt-1 text-[10px] font-semibold text-violet-700">{t.label}</span>
+                <span className="mt-1 text-[10px] font-semibold text-violet-700">{translate(t.bn, t.en)}</span>
               </button>
             );
           }
@@ -65,7 +68,7 @@ export function BottomNav({ active, onChange }: { active: TabKey; onChange: (t: 
                   isActive ? 'text-violet-700' : 'text-slate-400'
                 )}
               >
-                {t.label}
+                {translate(t.bn, t.en)}
               </span>
             </button>
           );

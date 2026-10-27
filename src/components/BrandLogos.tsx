@@ -30,6 +30,16 @@ export function RocketLogo({ className }: { className?: string }) {
   );
 }
 
+export function UpayLogo({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 48 48" className={className} role="img" aria-label="Upay">
+      <rect width="48" height="48" rx="10" fill="#E2231A" />
+      <path fill="#fff" d="M24 11l-9 4.5v8c0 5.5 3.8 10.5 9 12.5 5.2-2 9-7 9-12.5v-8L24 11z" />
+      <path fill="#E2231A" d="M20 22h8v2h-8v-2zm0 4h8v2h-8v-2z" />
+    </svg>
+  );
+}
+
 // Official-ish brand mark logos for platforms
 export function FacebookLogo({ className }: { className?: string }) {
   return (

@@ -1,48 +1,70 @@
 import { useState } from 'react';
 import { useAppStore } from '@/store/useAppStore';
-import { bdt } from '@/lib/format';
+import { useLanguage } from '@/lib/LanguageContext';
+import { bdt, coinsToBdt, coinsToBdtDisplay } from '@/lib/format';
 import type { Profile } from '@/lib/supabase';
+import { SideNavDrawer, type SideMenuDestination } from '@/components/SideNavDrawer';
+import { NotificationDrawer, useUnreadNoticeCount } from '@/components/NotificationDrawer';
+import type { TabKey } from '@/components/BottomNav';
 import {
   Bell,
   Briefcase,
   ChevronRight,
   Coins,
+  FolderOpen,
   Menu,
   Trophy,
   UserRound,
   Wallet,
   X,
 } from 'lucide-react';
-import type { TabKey } from '@/components/BottomNav';
+
+interface SideMenuHandler {
+  onNavigate: (dest: SideMenuDestination) => void;
+}
 
 export function HomeView({
   go,
   userName,
   profile,
+  onSideMenuNavigate,
 }: {
-  go: (t: TabKey) => void;
+  go: (t: string) => void;
   userName: string;
   profile: Profile | null;
+  onSideMenuNavigate: SideMenuHandler['onNavigate'];
 }) {
   const { activeWork, wallet } = useAppStore();
-  const [language, setLanguage] = useState<'BN' | 'EN'>('BN');
+  const { language, toggleLanguage, t: translate } = useLanguage();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const unreadCount = useUnreadNoticeCount();
   const w = wallet();
   const rank = profile?.rank ?? 0;
   const coins = profile?.coins ?? w.coins;
+  const coinBdt = coinsToBdt(coins);
   const hasActive = !!activeWork;
+
+  const goTo = (s: string) => go(s);
 
   return (
     <div className="min-h-screen bg-white">
+      <SideNavDrawer
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        profile={profile}
+        onNavigate={onSideMenuNavigate}
+      />
+
       <header className="relative border-b border-slate-100 bg-white px-4 pb-4 pt-4">
         <div className="flex items-center gap-2.5">
           <button
             type="button"
-            onClick={() => setMenuOpen((open) => !open)}
+            onClick={() => setMenuOpen(true)}
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-800 transition hover:bg-slate-100 active:scale-95"
-            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            aria-label="Open menu"
           >
-            {menuOpen ? <X size={28} strokeWidth={2.2} /> : <Menu size={30} strokeWidth={2.2} />}
+            <Menu size={30} strokeWidth={2.2} />
           </button>
           <img src="/assets/images/97428-removebg-preview.png" alt="ET work BD logo" className="h-11 w-11 shrink-0 rounded-xl object-cover" />
           <div className="min-w-0 flex-1">
@@ -52,7 +74,7 @@ export function HomeView({
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => setLanguage((current) => current === 'BN' ? 'EN' : 'BN')}
+              onClick={toggleLanguage}
               className="text-xs font-bold text-slate-800 transition active:scale-95"
               aria-label="Switch language"
             >
@@ -62,26 +84,17 @@ export function HomeView({
             </button>
             <button
               type="button"
-              onClick={() => setMenuOpen(false)}
+              onClick={() => setNotifOpen(true)}
               className="relative flex h-10 w-10 items-center justify-center text-slate-800 transition active:scale-95"
               aria-label="Notifications"
             >
               <Bell size={24} strokeWidth={1.9} />
-              <span className="absolute right-0 top-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold text-white ring-2 ring-white">3</span>
+              {unreadCount > 0 && (
+                <span className="absolute right-0 top-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold text-white ring-2 ring-white">{unreadCount > 9 ? '9+' : unreadCount}</span>
+              )}
             </button>
           </div>
         </div>
-
-        {menuOpen && (
-          <div className="absolute left-5 right-5 top-[82px] z-20 rounded-2xl bg-white p-2 shadow-xl ring-1 ring-slate-200 animate-pop">
-            <button type="button" onClick={() => { go('profile'); setMenuOpen(false); }} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50">
-              <UserRound size={18} className="text-violet-700" /> View profile
-            </button>
-            <button type="button" onClick={() => { go('wallet'); setMenuOpen(false); }} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50">
-              <Wallet size={18} className="text-violet-700" /> Open wallet
-            </button>
-          </div>
-        )}
       </header>
 
       <main className="space-y-5 px-4 pb-6 pt-5">
@@ -92,7 +105,7 @@ export function HomeView({
                 <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/15">
                   <Wallet size={19} strokeWidth={1.8} />
                 </span>
-                <p className="pt-0.5 text-sm font-bold leading-5 text-white/90">Current<br />Balance</p>
+                <p className="pt-0.5 text-sm font-bold leading-5 text-white/90">{translate('Current', 'Current')}<br />{translate('Balance', 'Balance')}</p>
               </div>
               <p className="whitespace-nowrap text-[22px] font-extrabold tracking-tight">{bdt(w.balance)} <span className="text-xs font-semibold text-white/80">Taka</span></p>
             </div>
@@ -100,8 +113,10 @@ export function HomeView({
               <span className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-300 text-amber-800 shadow-inner">
                 <Coins size={21} />
               </span>
-              <span className="text-base font-bold">{coins.toFixed(2)}</span>
-              <span className="text-xs text-white/80">Coin</span>
+              <div className="leading-tight">
+                <p className="text-base font-bold">{coins.toLocaleString()} <span className="text-xs text-white/80">Coins</span></p>
+                <p className="text-[11px] font-medium text-amber-200">{coinsToBdtDisplay(coins)} BDT</p>
+              </div>
             </div>
           </div>
 
@@ -109,44 +124,74 @@ export function HomeView({
             <div>
               <div className="flex items-center gap-3 text-slate-500">
                 <UserRound size={25} strokeWidth={1.8} className="text-emerald-600" />
-                <span className="text-sm font-semibold">Referral</span>
+                <span className="text-sm font-semibold">{translate('Referral', 'Referral')}</span>
               </div>
               <div className="mt-4 space-y-2 text-sm">
-                <p><span className="text-xl font-bold text-slate-800">৳ 0</span> <span className="text-slate-500">Taka</span></p>
-                <p><span className="text-xl font-bold text-slate-800">0</span> <span className="text-slate-500">Coin</span></p>
+                <p><span className="text-xl font-bold text-slate-800">{coinsToBdtDisplay(coins)}</span> <span className="text-slate-500">Taka</span></p>
+                <p><span className="text-xl font-bold text-slate-800">{coins.toLocaleString()}</span> <span className="text-slate-500">Coins</span></p>
               </div>
             </div>
             <div className="border-t border-slate-200 pt-4">
               <div className="flex items-center gap-3 text-slate-500">
                 <Trophy size={25} strokeWidth={1.8} className="text-amber-500" />
-                <span className="text-sm font-semibold">User Rank</span>
+                <span className="text-sm font-semibold">{translate('User Rank', 'User Rank')}</span>
               </div>
               <p className="mt-1 text-2xl font-extrabold text-slate-900">{rank > 0 ? `#${rank}` : '#232'}</p>
-              <button type="button" onClick={() => go('wallet')} className="mt-1 text-sm font-semibold text-emerald-700 transition hover:text-emerald-800">View leader</button>
+              <button type="button" onClick={() => go('wallet')} className="mt-1 text-sm font-semibold text-emerald-700 transition hover:text-emerald-800">{translate('View leader', 'View leaderboard')}</button>
             </div>
           </div>
         </section>
 
         <section>
-          <h2 className="mb-3 text-2xl font-extrabold tracking-tight text-slate-900">Your Work</h2>
-          <button
-            type="button"
-            onClick={() => go('work')}
-            className="flex w-full items-center justify-between rounded-[22px] bg-white p-4 text-left shadow-[0_8px_22px_rgba(15,23,42,0.08)] ring-1 ring-slate-200/80 transition hover:-translate-y-0.5 active:scale-[0.99]"
-          >
-            <span className="flex items-center gap-4">
-              <span className="flex h-16 w-16 items-center justify-center rounded-[19px] bg-emerald-100 text-emerald-700">
-                <Briefcase size={28} strokeWidth={1.8} />
+          <h2 className="mb-3 text-2xl font-extrabold tracking-tight text-slate-900">{translate('Your Work', 'Your Work')}</h2>
+          <div className="space-y-3">
+            <button
+              type="button"
+              onClick={() => go('work')}
+              className="flex w-full items-center justify-between rounded-[22px] bg-white p-4 text-left shadow-[0_8px_22px_rgba(15,23,42,0.08)] ring-1 ring-slate-200/80 transition hover:-translate-y-0.5 active:scale-[0.99]"
+            >
+              <span className="flex items-center gap-4">
+                <span className="flex h-16 w-16 items-center justify-center rounded-[19px] bg-emerald-100 text-emerald-700">
+                  <Briefcase size={28} strokeWidth={1.8} />
+                </span>
+                <span>
+                  <span className="block text-xl font-bold text-slate-900">{translate('My Work', 'My Tasks')}</span>
+                  <span className="mt-1 block max-w-[170px] truncate text-sm text-slate-500">{hasActive ? translate('You have a task in progress', 'You have a task in progress') : translate('View & manage your tasks', 'View and manage your tasks')}</span>
+                </span>
               </span>
-              <span>
-                <span className="block text-xl font-bold text-slate-900">My Work</span>
-                <span className="mt-1 block max-w-[170px] truncate text-sm text-slate-500">{hasActive ? 'You have a task in progress' : 'View & manage your tasks'}</span>
-              </span>
-            </span>
-            <ChevronRight size={30} className="text-slate-500" />
-          </button>
+              <ChevronRight size={30} className="text-slate-500" />
+            </button>
+
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => goTo('my-created')}
+                className="flex flex-col items-start gap-2 rounded-2xl bg-white p-4 text-left shadow-[0_6px_18px_rgba(15,23,42,0.07)] ring-1 ring-slate-200/80 transition hover:-translate-y-0.5 active:scale-[0.99]"
+              >
+                <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-violet-100 text-violet-700">
+                  <FolderOpen size={22} />
+                </span>
+                <span className="text-sm font-bold text-slate-900">{translate('আমার দেওয়া কাজ', 'Jobs I Posted')}</span>
+                <span className="text-[11px] text-slate-500">{translate('আপনার পোস্ট করা কাজ ও প্রমাণ যাচাই', 'Review jobs you posted and submitted proofs')}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => goTo('my-submissions')}
+                className="flex flex-col items-start gap-2 rounded-2xl bg-white p-4 text-left shadow-[0_6px_18px_rgba(15,23,42,0.07)] ring-1 ring-slate-200/80 transition hover:-translate-y-0.5 active:scale-[0.99]"
+              >
+                <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
+                  <Briefcase size={22} />
+                </span>
+                <span className="text-sm font-bold text-slate-900">{translate('আমার করা কাজ', 'My Completed Tasks')}</span>
+                <span className="text-[11px] text-slate-500">{translate('আপনার জমা দেওয়া কাজের ফলাফল', 'View the results of your submissions')}</span>
+              </button>
+            </div>
+          </div>
         </section>
       </main>
+
+      <NotificationDrawer open={notifOpen} onClose={() => setNotifOpen(false)} />
     </div>
   );
 }

@@ -100,12 +100,13 @@ interface AppState {
     instructions: string[];
   }) => { success: boolean; message: string };
   acceptJob: (jobId: string) => void;
-  submitProof: (jobId: string, screenshot: string) => { success: boolean; message: string };
+  submitProof: (jobId: string, screenshots: string[]) => { success: boolean; message: string };
   cancelActiveWork: () => void;
 
   // Admin: proofs
   approveProof: (proofId: string) => void;
   rejectProof: (proofId: string, reason: string) => void;
+  autoApproveExpiredProofs: () => void;
 
   // Admin: deposits / withdrawals
   approveDeposit: (id: string) => void;
@@ -253,15 +254,16 @@ export const useAppStore = create<AppState>()(
         });
       },
 
-      submitProof: (jobId, screenshot) => {
+      submitProof: (jobId, screenshots) => {
         const active = get().activeWork;
         const job = get().jobs.find((j) => j.id === jobId);
         const me = get().me();
         if (!active || active.jobId !== jobId || !job) {
           return { success: false, message: 'No active work for this job.' };
         }
-        if (!screenshot) {
-          return { success: false, message: 'Please upload the proof screenshot.' };
+        const valid = screenshots.filter(Boolean);
+        if (valid.length === 0) {
+          return { success: false, message: 'Please upload at least one proof screenshot.' };
         }
         const proof: ProofSubmission = {
           id: uid('proof_'),
@@ -269,7 +271,8 @@ export const useAppStore = create<AppState>()(
           workId: job.workId,
           workerId: me.id,
           workerName: me.name,
-          screenshot,
+          screenshot: valid[0],
+          screenshots: valid,
           status: 'Pending',
           reward: job.rate,
           submittedAt: Date.now(),
@@ -398,6 +401,33 @@ export const useAppStore = create<AppState>()(
         })),
 
       updateSettings: (patch) => set((s) => ({ settings: { ...s.settings, ...patch } })),
+
+      autoApproveExpiredProofs: () => {
+        const now = Date.now();
+        const AUTO_APPROVE_MS = 24 * 60 * 60 * 1000;
+        const expired = get().proofs.filter(
+          (p) => p.status === 'Pending' && now - p.submittedAt >= AUTO_APPROVE_MS
+        );
+        if (expired.length === 0) return;
+        set((s) => ({
+          proofs: s.proofs.map((p) =>
+            p.status === 'Pending' && now - p.submittedAt >= AUTO_APPROVE_MS
+              ? { ...p, status: 'Approved' as const, reviewedAt: now }
+              : p
+          ),
+          users: s.users.map((u) => {
+            const owed = expired
+              .filter((p) => p.workerId === u.id)
+              .reduce((sum, p) => sum + p.reward, 0);
+            return owed > 0 ? applyTxn(u, 'reward', owed, `Auto-approved after 24h: ${expired.filter((p) => p.workerId === u.id).map((p) => p.workId).join(', ')}`) : u;
+          }),
+          jobs: s.jobs.map((j) => {
+            const jobProofs = expired.filter((p) => p.jobId === j.id);
+            if (jobProofs.length === 0) return j;
+            return { ...j, status: j.availableSlots <= 0 ? 'Completed' : 'Active' };
+          }),
+        }));
+      },
     }),
     {
       name: 'bdt-microjob-v3',

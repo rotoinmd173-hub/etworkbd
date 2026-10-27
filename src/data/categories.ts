@@ -62,3 +62,14 @@ export const SUB_TASKS: Record<Platform, SubTask[]> = {
     { label: 'Feeder App Referral Task Complete', rate: 1.2 },
   ],
 };
+
+export const LEVEL_MULTIPLIER: Record<string, number> = {
+  'Level 1': 1,
+  'Level 2': 1.5,
+  'Level 3': 2,
+};
+
+export function rateForLevel(baseRate: number, level: string): number {
+  const mult = LEVEL_MULTIPLIER[level] ?? 1;
+  return Math.round(baseRate * mult * 100) / 100;
+}

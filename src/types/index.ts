@@ -58,6 +58,7 @@ export interface ProofSubmission {
   workerId: string;
   workerName: string;
   screenshot: string;
+  screenshots: string[];
   status: 'Pending' | 'Approved' | 'Rejected';
   reward: number;
   submittedAt: number;
@@ -74,7 +75,8 @@ export interface ActiveWork {
 export type DepositMethod =
   | 'bKash Personal'
   | 'Nagad Personal'
-  | 'Rocket Personal';
+  | 'Rocket Personal'
+  | 'Upay Personal';
 
 export interface DepositRequest {
   id: string;

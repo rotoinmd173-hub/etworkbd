@@ -8,6 +8,7 @@ import { UploadBox } from '@/views/CreateView';
 import { CopyButton, Toast } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { TaskInstructions } from '@/components/TaskInstructions';
+import { useLanguage } from '@/lib/LanguageContext';
 import {
   Zap, ChevronRight, ChevronLeft, Lock, Check, AlertTriangle,
   Clock, BadgeCheck, X, Upload,
@@ -22,7 +23,8 @@ type Screen =
   | { name: 'result'; job: Job; platform: Platform; subTask: string; success: boolean; message: string };
 
 export function WorkView() {
-  const { jobs, jobCountByPlatform, activeWork } = useAppStore();
+  const { t } = useLanguage();
+  const { jobs, jobCountByPlatform, activeWork, acceptJob } = useAppStore();
   const [screen, setScreen] = useState<Screen>({ name: 'category' });
 
   const go = (s: Screen) => setScreen(s);
@@ -37,11 +39,16 @@ export function WorkView() {
     });
   };
 
+  const acceptAndGo = (job: Job, platform: Platform, subTask: string) => {
+    acceptJob(job.id);
+    go({ name: 'submit', job, platform, subTask });
+  };
+
   return (
     <div className="min-h-full">
       {screen.name !== 'category' && (
         <Header
-          title={titleFor(screen)}
+          title={titleFor(screen, t)}
           onBack={back}
         />
       )}
@@ -55,7 +62,7 @@ export function WorkView() {
         <FeedScreen jobs={jobs.filter((j) => j.platform === screen.platform && j.subTaskType === screen.subTask)} onPick={(job) => go({ name: 'details', job, platform: screen.platform, subTask: screen.subTask })} />
       )}
       {screen.name === 'details' && (
-        <DetailsScreen job={screen.job} onAccept={() => go({ name: 'submit', job: screen.job, platform: screen.platform, subTask: screen.subTask })} hasActive={!!activeWork} />
+        <DetailsScreen job={screen.job} onAccept={() => acceptAndGo(screen.job, screen.platform, screen.subTask)} hasActive={!!activeWork} />
       )}
       {screen.name === 'submit' && (
         <SubmitScreen job={screen.job} onSubmit={(ok, msg) => go({ name: 'result', job: screen.job, platform: screen.platform, subTask: screen.subTask, success: ok, message: msg })} />
@@ -67,13 +74,13 @@ export function WorkView() {
   );
 }
 
-function titleFor(s: Screen): string {
+function titleFor(s: Screen, t: (bn: string, en: string) => string): string {
   if (s.name === 'subtask') return s.platform;
   if (s.name === 'feed') return s.subTask;
-  if (s.name === 'details') return 'কাজের বিবরণ';
-  if (s.name === 'submit') return 'কাজ জমা দিন';
-  if (s.name === 'result') return 'যাচাইয়ের ফলাফল';
-  return 'কাজ';
+  if (s.name === 'details') return t('কাজের বিবরণ', 'Task Details');
+  if (s.name === 'submit') return t('কাজ জমা দিন', 'Submit Task');
+  if (s.name === 'result') return t('যাচাইয়ের ফলাফল', 'Verification Result');
+  return t('কাজ', 'Tasks');
 }
 
 function Header({ title, onBack }: { title: string; onBack: () => void }) {
@@ -95,12 +102,13 @@ function CategoryScreen({
   jobCountByPlatform: (p: string) => number;
   onPick: (p: Platform) => void;
 }) {
+  const { t } = useLanguage();
   const total = jobs.filter((j) => j.availableSlots > 0).length;
   return (
     <div className="px-4 py-5">
       <div className="mb-5">
-        <h1 className="text-2xl font-extrabold text-slate-900">কাজ</h1>
-        <p className="mt-1 text-sm text-slate-500">একটি প্ল্যাটফর্ম বেছে নিন এবং আয় শুরু করুন।</p>
+        <h1 className="text-2xl font-extrabold text-slate-900">{t('কাজ', 'Tasks')}</h1>
+        <p className="mt-1 text-sm text-slate-500">{t('একটি প্ল্যাটফর্ম বেছে নিন এবং আয় শুরু করুন।', 'Choose a platform and start earning.')}</p>
       </div>
       {/* Instant work banner */}
       <div className="mb-5 flex items-center gap-3 overflow-hidden rounded-2xl bg-gradient-to-r from-amber-400 to-orange-500 p-4 text-white shadow-md">
@@ -108,8 +116,8 @@ function CategoryScreen({
           <Zap size={22} />
         </span>
         <div className="flex-1">
-          <p className="text-sm font-bold">ইনস্ট্যান্ট কাজ</p>
-          <p className="text-xs text-white/90">এখনই {total} টি কাজ পাওয়া যাচ্ছে</p>
+          <p className="text-sm font-bold">{t('ইনস্ট্যান্ট কাজ', 'Instant Tasks')}</p>
+          <p className="text-xs text-white/90">{t(`এখনই ${total} টি কাজ পাওয়া যাচ্ছে`, `${total} tasks available now`)}</p>
         </div>
       </div>
 
@@ -130,9 +138,9 @@ function CategoryScreen({
                 <CategoryIcon name={c.icon} className="h-7 w-7" />
               </div>
               <div className="flex-1">
-                <p className="font-bold text-slate-800">{c.platform} কাজ</p>
+                <p className="font-bold text-slate-800">{c.platform} {t('কাজ', 'Tasks')}</p>
                 <p className={cn('text-sm font-semibold', count > 0 ? 'text-emerald-600' : 'text-slate-400')}>
-                  {count > 0 ? `${count} টি কাজ পাওয়া যাচ্ছে` : 'কোনো কাজ নেই'}
+                  {count > 0 ? t(`${count} টি কাজ পাওয়া যাচ্ছে`, `${count} tasks available`) : t('কোনো কাজ নেই', 'No tasks available')}
                 </p>
               </div>
               <ChevronRight size={20} className="text-slate-300 group-hover:text-slate-400" />
@@ -146,10 +154,11 @@ function CategoryScreen({
 
 // ---- Sub-Task Screen ----
 function SubTaskScreen({ platform, jobs, onPick }: { platform: Platform; jobs: Job[]; onPick: (s: string) => void }) {
+  const { t } = useLanguage();
   const subs = SUB_TASKS[platform];
   return (
     <div className="px-4 py-4">
-      <p className="mb-3 text-sm text-slate-500">একটি টাস্ক টাইপ নির্বাচন করুন:</p>
+      <p className="mb-3 text-sm text-slate-500">{t('একটি টাস্ক টাইপ নির্বাচন করুন:', 'Select a task type:')}</p>
       <div className="space-y-2.5">
         {subs.map((s) => {
           const match = jobs.find((j) => j.subTaskType === s.label && j.availableSlots > 0);
@@ -176,17 +185,18 @@ function SubTaskScreen({ platform, jobs, onPick }: { platform: Platform; jobs: J
 
 // ---- Feed Screen ----
 function FeedScreen({ jobs, onPick }: { jobs: Job[]; onPick: (j: Job) => void }) {
+  const { t } = useLanguage();
   if (jobs.length === 0) {
     return (
       <div className="px-4 py-16 text-center">
-        <p className="text-sm text-slate-500">এই ক্যাটাগরিতে এখনো কোনো কাজ পোস্ট করা হয়নি।</p>
-        <p className="mt-1 text-xs text-slate-400">তৈরি করুন ট্যাব থেকে একটি কাজ তৈরি করে দেখুন।</p>
+        <p className="text-sm text-slate-500">{t('এই ক্যাটাগরিতে এখনো কোনো কাজ পোস্ট করা হয়নি।', 'No tasks have been posted in this category yet.')}</p>
+        <p className="mt-1 text-xs text-slate-400">{t('তৈরি করুন ট্যাব থেকে একটি কাজ তৈরি করে দেখুন।', 'Try creating one from the Create tab.')}</p>
       </div>
     );
   }
   return (
     <div className="space-y-3 px-4 py-4">
-      <p className="text-sm text-slate-500">{jobs.length} টি কাজ পাওয়া যাচ্ছে</p>
+      <p className="text-sm text-slate-500">{t(`${jobs.length} টি কাজ পাওয়া যাচ্ছে`, `${jobs.length} tasks available`)}</p>
       {jobs.map((j) => (
         <button
           key={j.id}
@@ -201,11 +211,11 @@ function FeedScreen({ jobs, onPick }: { jobs: Job[]; onPick: (j: Job) => void })
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-bold text-slate-800">{j.jobTitle}</p>
             <div className="mt-1 flex flex-wrap items-center gap-1.5">
-              <span className="badge bg-slate-100 text-slate-600">{j.availableSlots} স্লট খালি</span>
+              <span className="badge bg-slate-100 text-slate-600">{t(`${j.availableSlots} স্লট খালি`, `${j.availableSlots} slots open`)}</span>
               <span className="badge bg-violet-100 text-violet-700">{j.level}</span>
               {j.locked && (
                 <span className="badge bg-slate-200 text-slate-500">
-                  <Lock size={11} /> লক করা
+                  <Lock size={11} /> {t('লক করা', 'Locked')}
                 </span>
               )}
             </div>
@@ -222,36 +232,37 @@ function FeedScreen({ jobs, onPick }: { jobs: Job[]; onPick: (j: Job) => void })
 
 // ---- Details Screen ----
 function DetailsScreen({ job, onAccept, hasActive }: { job: Job; onAccept: () => void; hasActive: boolean }) {
+  const { t } = useLanguage();
   return (
     <div className="px-4 py-4">
       {/* timer banner */}
       <div className="mb-4 flex items-start gap-2.5 rounded-xl bg-amber-50 p-3.5 text-amber-800 ring-1 ring-amber-200">
         <Clock size={18} className="mt-0.5 shrink-0" />
         <p className="text-xs font-medium leading-relaxed">
-          সময়সীমা: কাজটি গ্রহণ করার পর ১০ মিনিটের মধ্যে জমা দিতে হবে।
+          {t('সময়সীমা: কাজটি গ্রহণ করার পর ১০ মিনিটের মধ্যে জমা দিতে হবে।', 'Deadline: You must submit within 10 minutes of accepting the task.')}
         </p>
       </div>
 
       <div className="card space-y-4">
         {/* Work ID */}
-        <Row label="কাজের আইডি">
+        <Row label={t('কাজের আইডি', 'Task ID')}>
           <span className="font-mono text-sm font-semibold text-slate-800">{job.workId}</span>
-          <CopyButton text={job.workId} label="কপি" />
+          <CopyButton text={job.workId} label={t('কপি', 'Copy')} />
         </Row>
-        <Row label="পেজের নাম">
+        <Row label={t('পেজের নাম', 'Page Name')}>
           <span className="text-sm font-semibold text-slate-800">{job.pageName}</span>
-          <CopyButton text={job.pageName} label="কপি" />
+          <CopyButton text={job.pageName} label={t('কপি', 'Copy')} />
         </Row>
-        <Row label="পুরস্কার">
+        <Row label={t('পুরস্কার', 'Reward')}>
           <span className="font-bold text-emerald-600">{bdt(job.rate)}</span>
         </Row>
-        <Row label="স্লট">
+        <Row label={t('স্লট', 'Slots')}>
           <span className="text-sm font-semibold text-slate-700">{job.availableSlots} / {job.totalWorkers}</span>
         </Row>
-        <Row label="লেভেল">
+        <Row label={t('লেভেল', 'Level')}>
           <span className="badge bg-violet-100 text-violet-700">{job.level}</span>
         </Row>
-        <Row label="কর্মীদাতা">
+        <Row label={t('কর্মীদাতা', 'Employer')}>
           <div className="flex items-center gap-2">
             <img src={job.employerThumbnail} alt="" className="h-6 w-6 rounded-full" />
             <span className="text-sm text-slate-700">{job.employerName}</span>
@@ -261,7 +272,7 @@ function DetailsScreen({ job, onAccept, hasActive }: { job: Job; onAccept: () =>
 
       {/* Reference screenshot */}
       <div className="mt-4">
-        <p className="mb-2 text-sm font-semibold text-slate-700">কর্মীদাতার নমুনা স্ক্রিনশট</p>
+        <p className="mb-2 text-sm font-semibold text-slate-700">{t('কর্মীদাতার নমুনা স্ক্রিনশট', 'Employer Reference Screenshot')}</p>
         <div className="overflow-hidden rounded-2xl ring-1 ring-slate-200">
           <img src={job.referenceScreenshot} alt="reference" className="w-full" />
         </div>
@@ -272,7 +283,7 @@ function DetailsScreen({ job, onAccept, hasActive }: { job: Job; onAccept: () =>
             rel="noreferrer"
             className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-violet-700"
           >
-            রেফারেন্স পেজ খুলুন <ChevronRight size={14} />
+            {t('রেফারেন্স পেজ খুলুন', 'Open Reference Page')} <ChevronRight size={14} />
           </a>
         )}
       </div>
@@ -282,7 +293,7 @@ function DetailsScreen({ job, onAccept, hasActive }: { job: Job; onAccept: () =>
         disabled={job.locked || job.availableSlots <= 0 || hasActive}
         className="brand-btn mt-5 w-full py-3 text-base"
       >
-        {job.locked ? <><Lock size={18} /> লক করা</> : hasActive ? 'চলমান কাজ শেষ করুন' : <><Check size={18} /> কাজটি গ্রহণ করুন</>}
+        {job.locked ? <><Lock size={18} /> {t('লক করা', 'Locked')}</> : hasActive ? t('চলমান কাজ শেষ করুন', 'Finish your active task first') : <><Check size={18} /> {t('কাজটি গ্রহণ করুন', 'Accept this task')}</>}
       </button>
     </div>
   );
@@ -299,8 +310,9 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 
 // ---- Submit Screen ----
 function SubmitScreen({ job, onSubmit }: { job: Job; onSubmit: (ok: boolean, msg: string) => void }) {
+  const { t } = useLanguage();
   const { submitProof, cancelActiveWork } = useAppStore();
-  const [proof, setProof] = useState('');
+  const [proofs, setProofs] = useState<string[]>(['', '', '']);
   const [toast, setToast] = useState<string | null>(null);
 
   // 10-min timer
@@ -313,17 +325,19 @@ function SubmitScreen({ job, onSubmit }: { job: Job; onSubmit: (ok: boolean, msg
   const ss = String(secsLeft % 60).padStart(2, '0');
   const expired = secsLeft === 0;
 
+  const uploadedCount = proofs.filter(Boolean).length;
+
   const doSubmit = () => {
     if (expired) {
       cancelActiveWork();
-      onSubmit(false, 'সময় শেষ হয়ে গেছে। কাজটি বাতিল করা হয়েছে।');
+      onSubmit(false, t('সময় শেষ হয়ে গেছে। কাজটি বাতিল করা হয়েছে।', 'Time is up. The task has been cancelled.'));
       return;
     }
-    if (!proof) {
-      setToast('অনুগ্রহ করে প্রমাণের স্ক্রিনশট আপলোড করুন।');
+    if (uploadedCount === 0) {
+      setToast(t('অনুগ্রহ করে অন্তত একটি প্রমাণের স্ক্রিনশট আপলোড করুন।', 'Please upload at least one proof screenshot.'));
       return;
     }
-    const res = submitProof(job.id, proof);
+    const res = submitProof(job.id, proofs.filter(Boolean));
     onSubmit(res.success, res.message);
   };
 
@@ -335,7 +349,7 @@ function SubmitScreen({ job, onSubmit }: { job: Job; onSubmit: (ok: boolean, msg
         expired ? 'bg-rose-600' : 'bg-gradient-to-r from-violet-600 to-violet-800'
       )}>
         <span className="flex items-center gap-2 text-sm font-medium">
-          <Clock size={18} /> অবশিষ্ট সময়
+          <Clock size={18} /> {t('অবশিষ্ট সময়', 'Time Remaining')}
         </span>
         <span className="font-mono text-lg font-bold tabular-nums">{mm}:{ss}</span>
       </div>
@@ -343,40 +357,47 @@ function SubmitScreen({ job, onSubmit }: { job: Job; onSubmit: (ok: boolean, msg
       {/* warning */}
       <div className="mb-4 flex items-start gap-2.5 rounded-xl bg-amber-50 p-3.5 text-amber-900 ring-1 ring-amber-200">
         <AlertTriangle size={18} className="mt-0.5 shrink-0" />
-        <p className="text-xs font-semibold leading-relaxed">⚠️ ভিডিও দেখে কাজ বুঝে কাজ করবেন</p>
+        <p className="text-xs font-semibold leading-relaxed">{t('⚠️ ভিডিও দেখে কাজ বুঝে কাজ করবেন', '⚠️ Watch the video and understand the task before doing it')}</p>
       </div>
 
-      {/* Platform-specific instructions */}
-      <TaskInstructions platform={job.platform} />
+      {/* Dynamic platform-specific instructions */}
+      <TaskInstructions platform={job.platform} subTaskType={job.subTaskType} jobComments={job.commentLines} />
 
-      {/* Employer-provided extra comment lines */}
-      {job.commentLines.length > 0 && (
-        <div className="card mt-4">
-          <p className="mb-1.5 text-xs font-bold text-slate-600">কর্মীদাতার দেওয়া কমেন্ট লাইনসমূহ:</p>
-          <ul className="space-y-1">
-            {job.commentLines.map((c, i) => (
-              <li key={i} className="rounded-lg bg-white px-2.5 py-1.5 text-xs text-slate-700 ring-1 ring-slate-200">{c}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Upload */}
+      {/* Upload - 3 screenshot boxes */}
       <div className="mt-4">
-        <p className="mb-2 text-sm font-semibold text-slate-700">#১ পেজ ফলো করে স্ক্রিনশট নিন</p>
-        <UploadBox value={proof} onChange={(f) => {
-          if (!f) return setProof('');
-          const r = new FileReader();
-          r.onload = () => setProof(r.result as string);
-          r.readAsDataURL(f);
-        }} onClear={() => setProof('')} label="প্রমাণের স্ক্রিনশট আপলোড করুন" />
+        <div className="mb-2 flex items-center justify-between">
+          <p className="text-sm font-semibold text-slate-700">{t('প্রমাণের স্ক্রিনশট (মোট ৩টি)', 'Proof Screenshots (Total 3)')}</p>
+          <span className={cn(
+            'badge text-[10px]',
+            uploadedCount === 3 ? 'bg-emerald-100 text-emerald-700' : uploadedCount > 0 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'
+          )}>
+            {uploadedCount}/{t('৩', '3')}
+          </span>
+        </div>
+        <div className="grid grid-cols-3 gap-2.5">
+          {proofs.map((proof, idx) => (
+            <div key={idx}>
+              <p className="mb-1 text-center text-[10px] font-semibold text-slate-500">#{idx + 1}</p>
+              <SquareUploadBox
+                value={proof}
+                onChange={(f) => {
+                  if (!f) { setProofs((p) => p.map((v, i) => i === idx ? '' : v)); return; }
+                  const r = new FileReader();
+                  r.onload = () => setProofs((p) => p.map((v, i) => i === idx ? (r.result as string) : v));
+                  r.readAsDataURL(f);
+                }}
+              />
+            </div>
+          ))}
+        </div>
+        <p className="mt-2 text-xs text-slate-500">{t('কাজের ধাপ অনুযায়ী ৩টি স্ক্রিনশট আপলোড করুন (অন্তত একটি আবশ্যক)।', 'Upload 3 screenshots according to the task steps (at least one required).')}</p>
       </div>
 
-      <button onClick={doSubmit} className="brand-btn mt-5 w-full py-3 text-base">
-        <Upload size={18} /> কাজটি সাবমিট করুন
+      <button onClick={doSubmit} disabled={expired} className="brand-btn mt-5 w-full py-3 text-base disabled:opacity-50">
+        <Upload size={18} /> {t('কাজটি সাবমিট করুন', 'Submit Task')}
       </button>
-      <button onClick={() => { cancelActiveWork(); onSubmit(false, 'কাজ বাতিল করা হয়েছে।'); }} className="ghost-btn mt-2 w-full">
-        বাতিল করুন
+      <button onClick={() => { cancelActiveWork(); onSubmit(false, t('কাজ বাতিল করা হয়েছে।', 'Task cancelled.')); }} className="ghost-btn mt-2 w-full">
+        {t('বাতিল করুন', 'Cancel')}
       </button>
 
       {toast && <Toast message={toast} onClose={() => setToast(null)} tone="error" />}
@@ -384,8 +405,35 @@ function SubmitScreen({ job, onSubmit }: { job: Job; onSubmit: (ok: boolean, msg
   );
 }
 
+function SquareUploadBox({ value, onChange }: { value: string; onChange: (file: File | undefined) => void }) {
+  const { t } = useLanguage();
+  return (
+    <label className="relative flex aspect-square w-full cursor-pointer items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 transition hover:border-violet-400 hover:bg-violet-50/50">
+      {value ? (
+        <>
+          <img src={value} alt="preview" className="h-full w-full object-cover" />
+          <button
+            type="button"
+            onClick={(e) => { e.preventDefault(); onChange(undefined); }}
+            className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white"
+          >
+            <X size={13} />
+          </button>
+        </>
+      ) : (
+        <div className="flex flex-col items-center gap-1 text-slate-400">
+          <Upload size={20} />
+          <span className="text-[9px] font-medium">{t('আপলোড', 'Upload')}</span>
+        </div>
+      )}
+      <input type="file" accept="image/*" className="hidden" onChange={(e) => onChange(e.target.files?.[0])} />
+    </label>
+  );
+}
+
 // ---- Result Screen ----
 function ResultScreen({ success, message, onDone }: { success: boolean; message: string; onDone: () => void }) {
+  const { t } = useLanguage();
   return (
     <div className="flex min-h-[70vh] flex-col items-center justify-center px-6 text-center">
       <div className={cn(
@@ -395,16 +443,16 @@ function ResultScreen({ success, message, onDone }: { success: boolean; message:
         {success ? <BadgeCheck size={48} className="text-emerald-600" /> : <X size={48} className="text-rose-600" />}
       </div>
       <h1 className="text-xl font-extrabold text-slate-900">
-        {success ? 'প্রমাণ জমা হয়েছে!' : 'জমা দিতে ব্যর্থ'}
+        {success ? t('প্রমাণ জমা হয়েছে!', 'Proof Submitted!') : t('জমা দিতে ব্যর্থ', 'Submission Failed')}
       </h1>
       <p className="mt-2 max-w-xs text-sm text-slate-600">{message}</p>
       {success && (
         <div className="mt-4 flex items-center gap-2 rounded-xl bg-amber-50 px-4 py-2 text-amber-700">
-          <Clock size={18} /> <span className="text-sm font-semibold">অ্যাডমিন যাচাইয়ের অপেক্ষায়</span>
+          <Clock size={18} /> <span className="text-sm font-semibold">{t('অ্যাডমিন যাচাইয়ের অপেক্ষায়', 'Awaiting admin verification')}</span>
         </div>
       )}
       <button onClick={onDone} className="brand-btn mt-6 px-8">
-        <BadgeCheck size={18} /> কাজে ফিরে যান
+        <BadgeCheck size={18} /> {t('কাজে ফিরে যান', 'Back to Tasks')}
       </button>
     </div>
   );
