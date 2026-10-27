@@ -301,7 +301,9 @@ function FinanceDashboard() {
       <div className="rounded-2xl bg-white p-4 ring-1 ring-slate-200">
         <h3 className="text-sm font-bold text-slate-800">Calculation Reference</h3>
         <div className="mt-2 space-y-1.5 text-xs text-slate-500">
-          <p><span className="font-semibold text-slate-700">Deposit Profit</span> = Approved Deposits Count × 5 BDT</p>
+       <p><span className="font-semibold text-slate-700">Deposit Profit:</span> Dynamic Method Cash-out Charge</p>
+          
+            
           <p><span className="font-semibold text-slate-700">Order Service Fee</span> = Completed Order Amount × 25%</p>
           <p><span className="font-semibold text-slate-700">Withdrawal Service Fee</span> = Processed Withdrawal Amount × 25%</p>
           <p><span className="font-semibold text-slate-700">Net Admin Profit</span> = Deposit Profit + Order Fee + Withdrawal Fee</p>
