@@ -6,6 +6,7 @@ import { CopyButton, Toast, copyText } from '@/components/ui';
 import { UploadBox } from '@/views/CreateView';
 import { useLanguage } from '@/lib/LanguageContext';
 import { cn } from '@/lib/cn';
+import { CASH_OUT_RATE_PER_1000, cashOutCharge } from '@/lib/paymentRates';
 import { BkashLogo, NagadLogo, RocketLogo, UpayLogo } from '@/components/BrandLogos';
 import {
   ChevronLeft, PlayCircle, History, Check, Clock, X, ShieldCheck,
@@ -15,14 +16,6 @@ import type { JSX } from 'react';
 // Rocket uses a different receive number; all others share one
 const PRIMARY_NUMBER = '01322490870';
 const ROCKET_NUMBER = '01984430576';
-
-// Cash-out charge per 1000 BDT (standard MFS rates)
-const CASH_OUT_RATE_PER_1000: Record<DepositMethod, number> = {
-  'bKash Personal': 18.5,
-  'Nagad Personal': 14.5,
-  'Rocket Personal': 18.5,
-  'Upay Personal': 15.0,
-};
 
 const METHOD_NUMBERS: Record<DepositMethod, string> = {
   'bKash Personal': PRIMARY_NUMBER,
@@ -60,8 +53,8 @@ export function DepositView({ onBack }: { onBack: () => void }) {
   const cashOutRate = CASH_OUT_RATE_PER_1000[method];
 
   const depositAmount = parseFloat(amount) || 0;
-  const cashOutCharge = (depositAmount / 1000) * cashOutRate;
-  const totalToSend = depositAmount + cashOutCharge;
+  const cashOutChargeVal = cashOutCharge(depositAmount, method);
+  const totalToSend = depositAmount + cashOutChargeVal;
 
   const copyNumber = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -184,7 +177,7 @@ export function DepositView({ onBack }: { onBack: () => void }) {
                 <span className="text-slate-500">
                   {t(`ক্যাশ-আউট চার্জ (${method.replace(' Personal', '')} · ৳${cashOutRate}/1000)`, `Cash-out charge (${method.replace(' Personal', '')} · ৳${cashOutRate}/1000)`)}
                 </span>
-                <span className="font-semibold text-rose-600">+৳{bdtPlain(cashOutCharge)}</span>
+                <span className="font-semibold text-rose-600">+৳{bdtPlain(cashOutChargeVal)}</span>
               </div>
               <div className="flex items-center justify-between border-t border-dashed border-slate-200 pt-2.5">
                 <span className="font-bold text-slate-700">{t('সেন্ড মানি করতে হবে (মোট)', 'Total to Send Money')}</span>

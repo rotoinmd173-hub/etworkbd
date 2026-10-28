@@ -5,6 +5,7 @@ import type { JobLevel, ProofSubmission } from '@/types';
 import { cn } from '@/lib/cn';
 import { Toast } from '@/components/ui';
 import { useLanguage } from '@/lib/LanguageContext';
+import { CASH_OUT_RATE_PER_1000, cashOutCharge } from '@/lib/paymentRates';
 import {
   adminFetchAllKyc, adminReviewKyc, adminFetchTickets, adminReply, adminFetchTicketMessages,
   fetchAllNotices, createNotice, toggleNoticeActive, deleteNotice, type Notice,
@@ -90,9 +91,23 @@ function FinanceDashboard() {
   const activeUsers = users.filter((u) => !u.blocked);
   const totalWalletLiability = activeUsers.reduce((sum, u) => sum + u.balance, 0);
 
-  // 2a. Deposit Profit = Total Approved Deposits Count * 5 BDT
+  // 2a. Deposit Profit = sum of cash-out charges for each approved deposit
+  //     (user sends amount + cash-out charge; admin keeps the cash-out charge)
   const approvedDeposits = deposits.filter((d) => d.status === 'approved');
-  const depositProfit = approvedDeposits.length * 5;
+  const depositProfit = approvedDeposits.reduce(
+    (sum, d) => sum + cashOutCharge(d.amount, d.method),
+    0
+  );
+
+  // Per-method breakdown for the UI
+  const depositByMethod = approvedDeposits.reduce((acc, d) => {
+    const charge = cashOutCharge(d.amount, d.method);
+    const entry = acc[d.method] ?? { count: 0, charge: 0 };
+    entry.count += 1;
+    entry.charge += charge;
+    acc[d.method] = entry;
+    return acc;
+  }, {} as Record<string, { count: number; charge: number }>);
 
   // 2b. Order Service Fee (25%) = Total Completed Order Amount * 0.25
   const completedJobs = jobs.filter((j) => j.status === 'Completed');
@@ -204,13 +219,27 @@ function FinanceDashboard() {
         <h3 className="mb-3 text-sm font-bold text-slate-700">Profit Breakdown</h3>
         <div className="grid grid-cols-1 gap-3">
           {/* Deposit Profit */}
-          <ProfitCard
-            icon={<Receipt size={18} />}
-            label="Deposit Profit"
-            formula={`${approvedDeposits.length} approved deposits × 5 BDT`}
-            value={depositProfit}
-            tone="bg-blue-50 ring-blue-200 icon-blue"
-          />
+          <div className="flex items-center gap-3 rounded-2xl bg-blue-50 p-3.5 ring-1 ring-blue-200">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
+              <Receipt size={18} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold text-slate-800">Deposit Profit (Cash-out Charges)</p>
+              <p className="text-[10px] text-slate-500">
+                {approvedDeposits.length} approved deposits · dynamic per-method rates
+              </p>
+              {Object.entries(depositByMethod).length > 0 && (
+                <div className="mt-1.5 flex flex-wrap gap-1">
+                  {Object.entries(depositByMethod).map(([method, info]) => (
+                    <span key={method} className="badge bg-blue-100 text-[9px] text-blue-700">
+                      {method.replace(' Personal', '')}: {info.count}× · {bdtPlain(info.charge)}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+            <p className="shrink-0 text-lg font-extrabold text-slate-900">{bdt(depositProfit)}</p>
+          </div>
           {/* Order Service Fee */}
           <ProfitCard
             icon={<TrendingUpIcon size={18} />}
@@ -301,8 +330,8 @@ function FinanceDashboard() {
       <div className="rounded-2xl bg-white p-4 ring-1 ring-slate-200">
         <h3 className="text-sm font-bold text-slate-800">Calculation Reference</h3>
         <div className="mt-2 space-y-1.5 text-xs text-slate-500">
-       <p><span className="font-semibold text-slate-700">Deposit Profit:</span> Dynamic Method Cash-out Charge</p>
-          
+          <p><span className="font-semibold text-slate-700">Deposit Profit</span> = Σ (each approved deposit amount × method cash-out rate per 1000)</p>
+          <p className="pl-3 text-slate-400">bKash ৳18.5/1000 · Nagad ৳14.5/1000 · Rocket ৳18.5/1000 · Upay ৳15/1000</p>
             
           <p><span className="font-semibold text-slate-700">Order Service Fee</span> = Completed Order Amount × 25%</p>
           <p><span className="font-semibold text-slate-700">Withdrawal Service Fee</span> = Processed Withdrawal Amount × 25%</p>
