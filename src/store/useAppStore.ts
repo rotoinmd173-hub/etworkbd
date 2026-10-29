@@ -343,10 +343,18 @@ export const useAppStore = create<AppState>()(
         }));
       },
 
-      rejectDeposit: (id) =>
+      rejectDeposit: (id) => {
+        const dep = get().deposits.find((d) => d.id === id);
+        if (!dep || dep.status !== 'pending') return;
         set((s) => ({
           deposits: s.deposits.map((d) => (d.id === id ? { ...d, status: 'rejected' } : d)),
-        })),
+          users: s.users.map((u) =>
+            u.id === dep.userId
+              ? applyTxn(u, 'deposit_rejected', dep.amount, `Deposit rejected: ${dep.method}`)
+              : u
+          ),
+        }));
+      },
 
       requestWithdraw: (amount, method, receiverNumber) => {
         const me = get().me();

@@ -533,6 +533,7 @@ function Proofs() {
 // ---------- Deposits ----------
 function Deposits() {
   const { deposits, approveDeposit, rejectDeposit } = useAppStore();
+  const [selectedScreenshot, setSelectedScreenshot] = useState<string | null>(null);
   const pending = deposits.filter((d) => d.status === 'pending');
   const done = deposits.filter((d) => d.status !== 'pending');
 
@@ -549,7 +550,14 @@ function Deposits() {
                 <p className="text-xs text-slate-500">{d.userName} · {d.method}</p>
                 <p className="text-xs text-slate-500">TrxID: {d.trxId} · Sender: {d.senderNumber}</p>
               </div>
-              <img src={d.screenshot} alt="" className="h-14 w-14 rounded-lg object-cover" />
+              <button
+                type="button"
+                onClick={() => setSelectedScreenshot(d.screenshot)}
+                className="shrink-0 overflow-hidden rounded-lg ring-1 ring-slate-200 transition hover:ring-violet-400 active:scale-95"
+                aria-label="View deposit receipt"
+              >
+                <img src={d.screenshot} alt="Deposit receipt" className="h-14 w-14 object-cover" />
+              </button>
             </div>
             <div className="mt-3 flex gap-2">
               <button onClick={() => approveDeposit(d.id)} className="flex-1 rounded-xl bg-emerald-600 py-2 text-xs font-semibold text-white active:scale-95">
@@ -578,6 +586,25 @@ function Deposits() {
             ))}
           </div>
         </>
+      )}
+
+      {selectedScreenshot && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          onClick={() => setSelectedScreenshot(null)}
+        >
+          <div className="relative flex max-h-full max-w-4xl items-center justify-center" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              onClick={() => setSelectedScreenshot(null)}
+              className="absolute -right-2 -top-2 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white text-slate-700 shadow-lg"
+              aria-label="Close receipt viewer"
+            >
+              <X size={18} />
+            </button>
+            <img src={selectedScreenshot} alt="Full deposit receipt" className="max-h-[90vh] max-w-full rounded-xl object-contain shadow-2xl" />
+          </div>
+        </div>
       )}
     </div>
   );

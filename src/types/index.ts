@@ -38,6 +38,7 @@ export interface Job {
 export type TxnType =
   | 'reward'
   | 'deposit'
+  | 'deposit_rejected'
   | 'withdraw'
   | 'spend'
   | 'penalty'

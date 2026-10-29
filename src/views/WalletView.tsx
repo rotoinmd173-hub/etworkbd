@@ -16,6 +16,7 @@ import type { TabKey } from '@/components/BottomNav';
 const TXN_META: Record<TxnType, { label: string; icon: typeof TrendingUp; tone: string }> = {
   reward: { label: 'Reward', icon: TrendingUp, tone: 'text-emerald-600 bg-emerald-100' },
   deposit: { label: 'Deposit', icon: ArrowDownToLine, tone: 'text-blue-600 bg-blue-100' },
+  deposit_rejected: { label: 'Deposit Rejected', icon: AlertCircle, tone: 'text-rose-600 bg-rose-100' },
   withdraw: { label: 'Withdraw', icon: ArrowUpFromLine, tone: 'text-amber-600 bg-amber-100' },
   spend: { label: 'Spend', icon: TrendingDown, tone: 'text-rose-600 bg-rose-100' },
   penalty: { label: 'Penalty', icon: AlertCircle, tone: 'text-rose-600 bg-rose-100' },
@@ -95,7 +96,7 @@ export function WalletView({ go, profile }: { go: (t: string) => void; profile: 
         {transactions.slice(0, 30).map((t) => {
           const meta = TXN_META[t.type];
           const Icon = meta.icon;
-          const sign = t.type === 'reward' || t.type === 'deposit' ? '+' : '−';
+          const sign = t.type === 'reward' || t.type === 'deposit' ? '+' : t.type === 'deposit_rejected' ? '' : '−';
           return (
             <div key={t.id} className="flex items-center gap-3 rounded-2xl bg-white p-3.5 ring-1 ring-slate-200/70 shadow-sm">
               <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${meta.tone}`}>
@@ -105,7 +106,7 @@ export function WalletView({ go, profile }: { go: (t: string) => void; profile: 
                 <p className="truncate text-sm font-semibold text-slate-800">{t.description}</p>
                 <p className="text-xs text-slate-400">{meta.label} · {timeAgo(t.createdAt)}</p>
               </div>
-              <span className={`text-sm font-bold ${t.type === 'reward' || t.type === 'deposit' ? 'text-emerald-600' : 'text-slate-700'}`}>
+              <span className={`text-sm font-bold ${t.type === 'reward' || t.type === 'deposit' ? 'text-emerald-600' : t.type === 'deposit_rejected' ? 'text-rose-600' : 'text-slate-700'}`}>
                 {sign}{bdt(t.amount)}
               </span>
             </div>
@@ -294,7 +295,7 @@ export function ProfileView({ goAdmin, profile }: { goAdmin: () => void; profile
         <p className="text-sm text-slate-500">{email}</p>
         <span className="badge mt-2 bg-emerald-100 text-emerald-700">{user.level}</span>
         {user.blocked && <span className="badge mt-2 bg-rose-100 text-rose-700">{t('Blocked', 'Blocked')}</span>}
-        
+      </div>
 
       <div className="mt-6 grid grid-cols-3 gap-3">
         <MiniStat label={t('Balance', 'Balance')} value={bdt(liveBalance)} />

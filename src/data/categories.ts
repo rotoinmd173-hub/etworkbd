@@ -54,12 +54,12 @@ export const SUB_TASKS: Record<Platform, SubTask[]> = {
     { label: 'Instagram Post Like, Comment & Save', rate: 0.45 },
   ],
   'Feeder App': [
-    { label: 'Feeder App Download & Sign Up', rate: 1.5 },
-    { label: 'Feeder App Daily Task Complete', rate: 0.75 },
-    { label: 'Feeder App Post Like, Comment & Share', rate: 0.4 },
-    { label: 'Feeder App Profile Follow', rate: 0.35 },
-    { label: 'Feeder App Video Watch & Like', rate: 0.5 },
-    { label: 'Feeder App Referral Task Complete', rate: 1.2 },
+    { label: 'Feeder Page Follower By Search', rate: 0.25 },
+    { label: 'Feeder Post Like, Comment & Share', rate: 0.4 },
+    { label: 'Feeder Video 3 Min Watch Time, Like, Comment & Share', rate: 0.75 },
+    { label: 'Feeder Video 1 Min Watch Time, Like, Comment & Share', rate: 0.5 },
+    { label: 'Feeder Post Love React and Comment', rate: 0.35 },
+    { label: 'Feeder Post Like & Comment', rate: 0.3 },
   ],
 };
 
